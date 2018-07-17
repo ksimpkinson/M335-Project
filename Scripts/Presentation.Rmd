@@ -1,0 +1,384 @@
+---
+title: ""
+author: "Kimberlee Simpkinson"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: cosmo  
+    keep_md: true
+    code_folding: hide
+    fig_align: 'center'
+---
+
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+library(tidyverse)
+library(dygraphs)
+library(DT)
+library(stringr)
+library(sf)
+library(USAboundaries)
+library(knitr)
+library(leaflet)
+library(ggthemes)
+library(ggridges)
+```
+
+```{r echo=FALSE}
+read_chunk('Data Tidying.R')
+```
+
+```{r first}
+<<data_tidying>>
+```
+
+# Final Project {.tabset}
+
+## Background
+
+\
+\
+
+**Is medical research making any difference to the number of people getting sick?**
+
+\
+
+Throughout the years there have been spectacular breakthroughs in many areas of study, including medicine. With all the time, energy, and money that has been spent on researching new medical practices and medications, is it making a significant impact? Have there been reductions in diseases and illnesses?
+
+After looking at mutiple resources, I decided to collect my data from the Big Cities Health Coalition. They have open access city-level data from 30 of the largest, most urben cities in the United States. The data includes mortality rates due to various illnesses, along with living styles and situations, from 2010 to 2016.
+
+To learn more about the Big Cities Health Coalition click [here](www.bigcitieshealth.org/bchi-about).
+
+## Data Exploration
+
+\
+\
+
+In the first table show the different categories and sub-categories that are included in this data set. For many of my visualizations I decided to focus on those relating to diseases and illnesses. The second table shows a snippet of what the data looks like, including the categories and the values. 
+
+\
+
+```{r}
+datatable(health_data_tidy %>% 
+            select(`Indicator Category`, `Shortened Indicator Name`) %>%
+            unique(), filter = "top", rownames = F,
+          options = list(pageLength = 5),
+          caption = "Table 1: Categories and subcategories included in data")
+```
+
+\
+
+```{r}
+datatable(health_data_tidy %>%
+            select(Year, City, `Shortened Indicator Name`, Value), 
+          filter = "top", rownames = F,
+          options = list(pageLength = 5), caption = "Table 2: Preview of data used")
+```
+
+\
+\
+
+Below is a histogram of the number of observations for each category. All years, genders, races, and cities are included in this diagram.
+
+\
+
+```{r}
+health_data_tidy %>%
+  filter(`Health Type` == "Disease Related") %>%
+  group_by(`Shortened Indicator Name`) %>%
+  summarise(Count = n()) %>%
+  ggplot(aes(reorder(`Shortened Indicator Name`, Count), Count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Disease Related Metrics", x = "Metric Description",
+       y = "Frequency of Observations") +
+  theme_economist()
+```
+
+<br>
+<br>
+<br>
+
+## Diseases and Illnesses
+
+\
+\
+
+Below is a graph showing mortality rates for various illnesses across major cities in the United States. Cancer and heart disease is the leading cause of death in these categories. Looking over the years, though, there doesn't seem to be much of a trend, for increasing or decreasing numbers. Some cities have more of a decrease than others, but the decrease is slight. 
+
+This is a density chart, the peaks show how many observations there are in each location. If the peaks moves to the right or left, that means the value over the years is either decreasing or increasing.
+
+\
+
+```{r fig.height=3, fig.width=12}
+# Disease related mortality rate
+
+#health_data_tidy %>%
+#  filter(`Health Type` == "Disease Related",
+#         `Shortened Indicator Name` %in% c("All Types of Cancer Mortality Rate",
+#                                           "Diabetes Mortality Rate",
+#                                           "Heart Disease Mortality Rate",
+#                                           "HIV-Related Mortality Rate",
+#                                           "Infant Mortality Rate",
+#                                           "Lung Cancer Mortality Rate",
+#                                           "Opioid-Related Overdose Mortality Rate",
+#                                           "Pneumonia & Influenza Mortality Rate"),
+#         City != "U.S. Total") %>%
+#  group_by(Year, `Shortened Indicator Name`, City, State) %>%
+#  summarise(Value = mean(Value)) %>%
+#  ggplot(aes(Year, Value, group = `Shortened Indicator Name`)) +
+#  geom_line(aes(color = `Shortened Indicator Name`), size = 1.1) +
+#  facet_wrap(~ City, scales = "free") + 
+#  theme_economist() +
+#  scale_color_brewer(palette = "Set2") +
+#  scale_x_continuous(breaks = seq(2010, 2016, by = 1)) +
+#  labs(title = "Mortality Rates Across Cities", color = "", y = "Mortality Rate", x = "")
+
+
+
+health_data_tidy %>%
+  filter(`Health Type` == "Disease Related",
+         `Shortened Indicator Name` %in% c("All Types of Cancer Mortality Rate",
+                                           "Heart Disease Mortality Rate"),
+         City != "U.S. Total") %>%
+  ggplot(aes(Value, `Shortened Indicator Name`, fill = `Shortened Indicator Name`)) +
+  geom_density_ridges() +
+  theme_economist() +
+  theme(legend.position = "none") +
+  facet_grid(. ~ Year) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Mortality Rates", color = "", y = "", x = "")
+```
+
+```{r fig.height=5, fig.width=12}
+health_data_tidy %>%
+  filter(`Health Type` == "Disease Related",
+         `Shortened Indicator Name` %in% c("Diabetes Mortality Rate",
+                                           "HIV-Related Mortality Rate",
+                                           "Infant Mortality Rate",
+                                           "Lung Cancer Mortality Rate",
+                                           "Opioid-Related Overdose Mortality Rate",
+                                           "Pneumonia & Influenza Mortality Rate"),
+         City != "U.S. Total") %>%
+  ggplot(aes(Value, `Shortened Indicator Name`, fill = `Shortened Indicator Name`)) +
+  geom_density_ridges() +
+  theme_economist() +
+  theme(legend.position = "none") +
+  facet_grid(. ~ Year) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Mortality Rates", color = "", y = "", x = "")
+```
+  
+\
+\
+
+These next two graphs focus on pneumonia & influenza mortality rates as well as diabetes mortality rates. These categories are ones I felt fell in the category of diseases, but were ones that couldn't necessarily be prevented completely by personal decisions and actions. They were also illnesses that should be treatable, to an extent.
+
+As we can see from the graphs below, though, the mortality rate from these two categories has interesting patterns in these cities. In a number of cities the rate actually decreases, while in others it increases. We can also compare the rate in each city to the national rate. Cities like Detroit and Oakland are deviating from the national average in a negative way, while Boston, Chicago, and Minneapolis are improving while the national average is increasing.
+
+\
+
+```{r fig.height=9, fig.width=12}
+
+# E.Coli and Pneumonia & Influenza Motrality Rate
+
+Pneu_bench <- health_data_tidy %>% 
+  filter(City == "U.S. Total", 
+         `Shortened Indicator Name` == "Pneumonia & Influenza Mortality Rate") %>%
+  select(Value, Year, `Shortened Indicator Name`) %>%
+  rename("Pneumonia Benchmark" = Value)
+
+health_data_tidy2 <- left_join(health_data_tidy, Pneu_bench)
+
+health_data_tidy2 %>%
+  filter(`Shortened Indicator Name` %in% c("Pneumonia & Influenza Mortality Rate"),
+         City != "U.S. Total") %>%
+  ggplot() +
+  geom_line(aes(Year, Value, color = "City Average"), size = 1.5) +
+  geom_line(aes(Year, `Pneumonia Benchmark`, color = "National Average"), size = 1.5) +
+  theme_economist() +
+  facet_wrap(~ City) +
+  labs(title = "Pneumonia Mortality Rate", y = "Mortality Rate", color = "") +
+  scale_x_continuous(breaks = seq(2010, 2016, by = 1)) +
+  scale_y_continuous(breaks = seq(10, 30, by = 5)) +
+  scale_color_manual(values = c("#20b2aa", "#8a496b"))
+```
+
+\
+
+```{r fig.height=9, fig.width=12}
+
+Diab_bench <- health_data_tidy %>% 
+  filter(City == "U.S. Total", 
+         `Shortened Indicator Name` == "Diabetes Mortality Rate") %>%
+  select(Value, Year, `Shortened Indicator Name`) %>%
+  rename("Diabetes Benchmark" = Value)
+
+health_data_tidy3 <- left_join(health_data_tidy, Diab_bench)
+
+
+health_data_tidy3 %>%
+  filter(`Shortened Indicator Name` %in% c("Diabetes Mortality Rate"),
+         City != "U.S. Total") %>%
+  ggplot() +
+  geom_line(aes(Year, Value, color = "City Average"), size = 1.5) +
+  geom_line(aes(Year, `Diabetes Benchmark`, color = "National Average"), size = 1.5) +
+  theme_economist() +
+  facet_wrap(~ City) +
+  labs(title = "Diabetes Mortality Rate", y = "Mortality Rate", color = "") +
+  scale_x_continuous(breaks = seq(2010, 2016, by = 1)) +
+  scale_y_continuous(breaks = seq(10, 30, by = 5)) +
+  scale_color_manual(values = c("#20b2aa", "#8a496b"))
+```
+  
+\
+\
+
+The next two graphs focus on heart disease. This first graph is showing the mortality rate from heart disease in 2011 and 2013. The blue and red circles represent 2011 and  2013 respectively. Some cities didn't have a value for both years. As you can see, many of the circles don't have much of a size difference. There are some states that have a higher rate in 2011, but others who have had no improvement, and actually have a higher mortality rate in 2013, while others seem to have no difference at all.
+
+\
+
+```{r fig.width=9}
+# Map of 2011 & 2013 heart disease
+
+health_data_tidy_geo %>%
+  leaflet() %>%
+  setView(lng = -100, lat = 42.3601, zoom = 3) %>%
+  addTiles() %>%
+  addCircles(data = health_data_tidy_geo %>%
+               filter(`Shortened Indicator Name` == "Heart Disease Mortality Rate",
+                      Year == 2011), ~lon, ~lat, 
+             weight = 1, radius = ~Value*1000) %>%
+  addCircles(data = health_data_tidy_geo %>%
+               filter(`Shortened Indicator Name` == "Heart Disease Mortality Rate",
+                      Year == 2013), ~lon, ~lat, 
+             weight = 1, radius = ~Value*1000, color = "red")
+```
+
+\
+\
+
+This next graph still shows heart disease, but for all the years available. Here we can see more closely the trends in mortality rate and see that again, in some cities there are improvements, but some not. 14 of the 25 cities show a decrease.
+
+\
+
+```{r fig.height=9, fig.width=12}
+# Heart disease mortality
+
+#health_data_tidy_geo %>%
+#  filter(`Shortened Indicator Name` == "Heart Disease Mortality Rate") %>%
+#  ggplot(aes(Year, Value, color = City)) +
+#  geom_line(size = 1.5) +
+#  theme_economist() +
+#  theme(legend.position = "none") +
+#  facet_wrap(~ City, scales = "free") +
+#  scale_x_continuous(breaks = seq(2010, 2016, by = 1)) +
+#  labs(title = "Heart Disease", y = "Mortality Rate", x = "")
+
+
+health_data_tidy_geo %>%
+  filter(`Health Type` == "Disease Related",
+         `Shortened Indicator Name` == "Heart Disease Mortality Rate") %>%
+  mutate(Year = parse_character(Year)) %>%
+  ggplot(aes(Year, Value, color = City)) +
+  geom_jitter(size = 3) +
+  geom_boxplot(size = 1.1, alpha = 0.3, color = "steelblue") +
+  theme_economist() +
+  #theme(legend.position = "none") +
+  labs(title = "Heart Disease", y = "Mortality Rate", x = "")
+  #scale_color_brewer(palette = "Dark2")
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+## Personal Decisions
+
+\
+\
+
+Below are shown some of the personal decisions people make in their lives that impact their health. Many diseases and illnesses aren't treatable or preventable, but some are. These actions below, if they had a  trend, could affect the trend in the diseases.  
+
+Looking below, though, there doesn't seem to be a strong trend in these habits. Many stay constant. 
+
+\
+
+```{r fig.height=4, fig.width=12}
+health_data_tidy %>%
+  filter(`Shortened Indicator Name` %in% c("Adult Binge Drinking",
+                                           "Adult Smoking",
+                                           "Teen Smoking",
+                                           "Pneumonia Vaccine (Age 65+)"),
+         City %in% c("Boston", "Detroit", "Miami", "New York City")) %>%
+  ggplot(aes(Year, Value, color = `Shortened Indicator Name`)) +
+  geom_line(size = 1.1) +
+  facet_grid(. ~ City) +
+  labs(title = "Personal Decisions", x = "", color = "",
+       y = "Percentage of People") +
+  theme_economist() +
+  theme(legend.position = "top") +
+  scale_x_continuous(breaks = seq(2010, 2016, by = 1)) +
+  scale_y_continuous(breaks = seq(10, 60, by = 10)) +
+  scale_color_manual(values = c("#20b2aa", "#8a496b", "#F1C40F", "#E74C3C"))
+```
+
+\
+\
+
+Comparing the percentage of people who get a pneumonia vaccine with the mortality rate there should be a negative correlation. The more people who get a vaccine, the lower the mortality rate. Unfortunately there doesn't seem to be a correlation. Perhaps there isn't enough data to show that, or the mortality rate is for all age groups whereas the vaccine percentage is only for those 65 and older.
+
+This is a violin chart. The bubbling out of the shape indicates that there are more observations that fall into that category. If the bubbles widen or narrow across the years, then the mortality rates/percentages are increasing or decreasing respectively.
+
+\
+
+```{r fig.height=5, fig.width=12}
+#health_data_tidy %>%
+#  filter(`Shortened Indicator Name` %in% c("Pneumonia & Influenza Mortality Rate",
+#                                           "Pneumonia Vaccine (Age 65+)"),
+#         City != "U.S. Total") %>%
+#  ggplot(aes(Year, Value, color = `Shortened Indicator Name`)) +
+#  geom_line(size = 1.1) +
+#  facet_wrap(~ City, scales = "free") +
+#  theme_economist() +
+#  theme(legend.position = "top") +
+#  labs(title = "Pneumonia", x = "", color = "") +
+#  scale_color_manual(values = c("#20b2aa", "#8a496b")) +
+#  scale_x_continuous(breaks = seq(2010, 2016, by = 1))
+
+health_data_tidy %>%
+  filter(`Shortened Indicator Name` %in% c("Pneumonia & Influenza Mortality Rate",
+                                           "Pneumonia Vaccine (Age 65+)"),
+         City != "U.S. Total") %>%
+  mutate(`Shortened Indicator Name` = case_when(
+    `Shortened Indicator Name` == "Pneumonia & Influenza Mortality Rate"  ~  "Mortality Rate",
+    `Shortened Indicator Name` == "Pneumonia Vaccine (Age 65+)"  ~  "% Who Received Vaccine"
+  )) %>%
+  ggplot(aes(`Shortened Indicator Name`, Value, fill = `Shortened Indicator Name`)) +
+  geom_point() +
+  geom_violin() +
+  theme_economist() +
+  scale_fill_manual(values = c("#20b2aa", "#8a496b")) +
+  scale_color_manual(values = c("#20b2aa", "#8a496b")) +
+  facet_grid(. ~ Year) +
+  theme(axis.text.x = element_blank()) +
+  labs(title = "Pneumonia", x = "", fill = "", y = "")
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+## Conclusion
+
+Based on the data, we can conclude that the mortality rate for diseases isn't changing in significant ways. In some cities there are improvements, hopefully due to patients being treated more accurately based on research, but in other cities there are no improvements and sometimes even worsening. If I were to do further research I would look at the reasons why some of the cities are improving and find more data that shows diseases on a more granular scale.

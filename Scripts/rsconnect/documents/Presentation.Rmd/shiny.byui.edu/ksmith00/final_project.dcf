@@ -1,0 +1,12 @@
+name: final_project
+title: Final Project
+username: ksmith00
+account: ksmith00
+server: shiny.byui.edu
+hostUrl: https://shiny.byui.edu/__api__
+appId: 343
+bundleId: 600
+url: https://shiny.byui.edu/content/343/
+when: 1531865153.69773
+asMultiple: FALSE
+asStatic: TRUE
